@@ -164,7 +164,7 @@ class AIMatchApiTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_match_requires_profile_skills(): void
+    public function test_match_returns_fallback_when_profile_skills_are_missing(): void
     {
         $candidate = User::factory()->create([
             'role' => UserRole::Candidate->value,
@@ -182,7 +182,10 @@ class AIMatchApiTest extends TestCase
         Sanctum::actingAs($candidate);
 
         $this->getJson("/api/ai/match/{$job->id}", $this->jsonApiHeaders())
-            ->assertStatus(400)
-            ->assertJsonPath('errors.0.status', '400');
+            ->assertOk()
+            ->assertJsonPath('data.attributes.match_score', 0)
+            ->assertJsonPath('data.attributes.missing_skills.0', 'Laravel')
+            ->assertJsonPath('data.attributes.summary', 'Add skills to your profile to generate a stronger match.')
+            ->assertJsonPath('data.attributes.source', 'fallback');
     }
 }
