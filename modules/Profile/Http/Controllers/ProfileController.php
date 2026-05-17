@@ -40,6 +40,7 @@ class ProfileController extends Controller
                     $user,
                     $request->profileAttributes(),
                     $request->resumeFile(),
+                    $request->profilePictureFile(),
                 ),
             ),
         );

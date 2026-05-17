@@ -192,4 +192,41 @@ class ProfileApiTest extends TestCase
 
         Storage::disk('public')->assertExists(str_replace('/storage/', '', parse_url($resumeUrl, PHP_URL_PATH)));
     }
+
+    public function test_an_authenticated_user_can_upload_a_profile_picture_when_updating_their_profile(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create([
+            'role' => UserRole::Candidate->value,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->post('/api/profile/me', [
+            '_method' => 'PATCH',
+            'data' => [
+                'type' => 'profiles',
+                'attributes' => [
+                    'headline' => 'Backend Engineer',
+                ],
+            ],
+            'profile_picture' => UploadedFile::fake()->image('avatar.png', 400, 400),
+        ], [
+            'Accept' => 'application/vnd.api+json',
+        ]);
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.api+json')
+            ->assertJsonPath('data.attributes.headline', 'Backend Engineer');
+
+        $pictureUrl = $response->json('data.attributes.profile_picture_url');
+        $this->assertIsString($pictureUrl);
+        $this->assertStringContainsString('/storage/profile_pictures/', $pictureUrl);
+
+        $profile = $user->profile()->firstOrFail();
+        $this->assertSame($pictureUrl, $profile->profile_picture_url);
+
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', parse_url($pictureUrl, PHP_URL_PATH)));
+    }
 }

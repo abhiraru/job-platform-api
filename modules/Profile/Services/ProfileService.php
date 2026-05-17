@@ -25,13 +25,21 @@ class ProfileService
         return $this->profiles->firstOrCreateForUser($user);
     }
 
-    public function upsertProfile(User $user, array $attributes, ?UploadedFile $resume = null): Profile
+    public function upsertProfile(User $user, array $attributes, ?UploadedFile $resume = null, ?UploadedFile $profilePicture = null): Profile
     {
         if ($resume !== null) {
             $path = $resume->store('resumes', 'public');
 
             if ($path !== false) {
                 $attributes['resume_url'] = Storage::disk('public')->url($path);
+            }
+        }
+
+        if ($profilePicture !== null) {
+            $path = $profilePicture->store('profile_pictures', 'public');
+
+            if ($path !== false) {
+                $attributes['profile_picture_url'] = Storage::disk('public')->url($path);
             }
         }
 

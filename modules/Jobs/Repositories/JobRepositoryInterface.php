@@ -15,6 +15,8 @@ interface JobRepositoryInterface
 
     public function createForRecruiter(User $recruiter, array $attributes): JobPost;
 
+    public function update(JobPost $job, array $attributes): JobPost;
+
     public function find(int $id): ?JobPost;
 
     public function delete(JobPost $job): void;

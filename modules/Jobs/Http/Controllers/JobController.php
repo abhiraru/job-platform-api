@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Modules\Jobs\Http\Requests\IndexJobsRequest;
 use Modules\Jobs\Http\Requests\StoreJobRequest;
+use Modules\Jobs\Http\Requests\UpdateJobRequest;
 use Modules\Jobs\Http\Resources\JobResource;
 use Modules\Jobs\Models\JobPost;
 use Modules\Jobs\Services\JobService;
@@ -48,6 +49,65 @@ class JobController extends Controller
     public function show(JobPost $job): JsonResponse
     {
         return $this->success(JobResource::make($job->loadMissing('recruiter')));
+    }
+
+    public function myJobs(IndexJobsRequest $request): JsonResponse
+    {
+        /** @var User $recruiter */
+        $recruiter = $request->user();
+
+        if ($recruiter->role !== UserRole::Employer) {
+            return response()
+                ->json([
+                    'jsonapi' => [
+                        'version' => '1.1',
+                    ],
+                    'errors' => [
+                        [
+                            'status' => '403',
+                            'title' => 'Forbidden',
+                            'detail' => 'Only recruiters can view their jobs.',
+                        ],
+                    ],
+                ], 403)
+                ->header('Content-Type', 'application/vnd.api+json');
+        }
+
+        $jobs = $this->jobService->getRecruiterJobs($recruiter, $request->filters());
+
+        return JobResource::collection($jobs)
+            ->additional([
+                'jsonapi' => [
+                    'version' => '1.1',
+                ],
+            ])
+            ->response()
+            ->header('Content-Type', 'application/vnd.api+json');
+    }
+
+    public function update(UpdateJobRequest $request, JobPost $job): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+
+        if ($user->role !== UserRole::Employer || $job->recruiter_id !== $user->id) {
+            return response()
+                ->json([
+                    'jsonapi' => [
+                        'version' => '1.1',
+                    ],
+                    'errors' => [
+                        [
+                            'status' => '403',
+                            'title' => 'Forbidden',
+                            'detail' => 'You are not allowed to update this job.',
+                        ],
+                    ],
+                ], 403)
+                ->header('Content-Type', 'application/vnd.api+json');
+        }
+
+        return $this->success(JobResource::make($this->jobService->updateJob($job, $request->jobAttributes())));
     }
 
     public function destroy(JobPost $job): JsonResponse

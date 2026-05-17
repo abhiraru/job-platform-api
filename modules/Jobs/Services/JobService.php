@@ -27,6 +27,18 @@ class JobService
         return $this->jobs->createForRecruiter($recruiter, $attributes);
     }
 
+    public function getRecruiterJobs(User $recruiter, array $filters): LengthAwarePaginator
+    {
+        $filters['recruiter_id'] = $recruiter->id;
+
+        return $this->jobs->paginate($filters);
+    }
+
+    public function updateJob(JobPost $job, array $attributes): JobPost
+    {
+        return $this->jobs->update($job, $attributes);
+    }
+
     public function getJob(int $id): ?JobPost
     {
         return $this->jobs->find($id);

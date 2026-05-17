@@ -20,6 +20,7 @@ use Modules\Profile\Enums\ProfileAvailability;
     'linkedin_url',
     'portfolio_url',
     'resume_url',
+    'profile_picture_url',
     'availability_status',
 ])]
 class Profile extends Model

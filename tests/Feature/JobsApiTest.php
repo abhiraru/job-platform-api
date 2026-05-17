@@ -248,4 +248,104 @@ class JobsApiTest extends TestCase
             'id' => $job->id,
         ]);
     }
+
+    public function test_a_recruiter_can_list_their_own_jobs(): void
+    {
+        $recruiter = User::factory()->create(['role' => UserRole::Employer->value]);
+        $otherRecruiter = User::factory()->create(['role' => UserRole::Employer->value]);
+
+        JobPost::query()->create([
+            'recruiter_id' => $recruiter->id,
+            'title' => 'Laravel Backend Engineer',
+            'description' => 'Work on backend.',
+            'job_type' => JobType::FullTime->value,
+        ]);
+
+        JobPost::query()->create([
+            'recruiter_id' => $otherRecruiter->id,
+            'title' => 'Other Recruiter Job',
+            'description' => 'Should not be visible.',
+        ]);
+
+        Sanctum::actingAs($recruiter);
+
+        $response = $this->getJson('/api/recruiter/jobs?filter[search]=Laravel&filter[job_type]=full-time&page[size]=10&page[number]=1', $this->jsonApiHeaders());
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.attributes.title', 'Laravel Backend Engineer')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_a_non_employer_cannot_access_recruiter_jobs(): void
+    {
+        $candidate = User::factory()->create(['role' => UserRole::Candidate->value]);
+
+        Sanctum::actingAs($candidate);
+
+        $this->getJson('/api/recruiter/jobs', $this->jsonApiHeaders())
+            ->assertForbidden()
+            ->assertJsonPath('errors.0.status', '403');
+    }
+
+    public function test_an_employer_can_update_their_job(): void
+    {
+        $recruiter = User::factory()->create(['role' => UserRole::Employer->value]);
+
+        $job = JobPost::query()->create([
+            'recruiter_id' => $recruiter->id,
+            'title' => 'Typo Titl',
+            'description' => 'Original description.',
+        ]);
+
+        Sanctum::actingAs($recruiter);
+
+        $response = $this->patchJson("/api/jobs/{$job->id}", [
+            'data' => [
+                'type' => 'jobs',
+                'attributes' => [
+                    'title' => 'Typo Title',
+                    'salary_range' => '10L-12L',
+                ],
+            ],
+        ], $this->jsonApiHeaders());
+
+        $response->assertOk()
+            ->assertJsonPath('data.attributes.title', 'Typo Title')
+            ->assertJsonPath('data.attributes.salary_range', '10L-12L');
+
+        $this->assertDatabaseHas('job_posts', [
+            'id' => $job->id,
+            'title' => 'Typo Title',
+            'salary_range' => '10L-12L',
+        ]);
+    }
+
+    public function test_an_employer_cannot_update_another_recruiters_job(): void
+    {
+        $owner = User::factory()->create(['role' => UserRole::Employer->value]);
+        $otherRecruiter = User::factory()->create(['role' => UserRole::Employer->value]);
+
+        $job = JobPost::query()->create([
+            'recruiter_id' => $owner->id,
+            'title' => 'Platform Engineer',
+            'description' => 'Own platform systems.',
+        ]);
+
+        Sanctum::actingAs($otherRecruiter);
+
+        $this->patchJson("/api/jobs/{$job->id}", [
+            'data' => [
+                'type' => 'jobs',
+                'attributes' => ['title' => 'Not allowed'],
+            ],
+        ], $this->jsonApiHeaders())
+            ->assertForbidden()
+            ->assertJsonPath('errors.0.status', '403');
+
+        $this->assertDatabaseHas('job_posts', [
+            'id' => $job->id,
+            'title' => 'Platform Engineer',
+        ]);
+    }
 }

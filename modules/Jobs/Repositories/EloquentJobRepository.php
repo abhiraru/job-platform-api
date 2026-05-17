@@ -59,6 +59,14 @@ class EloquentJobRepository implements JobRepositoryInterface
         return JobPost::query()->with('recruiter')->find($id);
     }
 
+    public function update(JobPost $job, array $attributes): JobPost
+    {
+        $job->fill($attributes);
+        $job->save();
+
+        return $job->loadMissing('recruiter');
+    }
+
     public function delete(JobPost $job): void
     {
         $job->delete();

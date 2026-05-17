@@ -28,6 +28,7 @@ class PublicProfileResource extends JsonResource
                 'linkedin_url' => $this->linkedin_url,
                 'portfolio_url' => $this->portfolio_url,
                 'resume_url' => $this->resume_url,
+                'profile_picture_url' => $this->profile_picture_url,
                 'availability_status' => $this->availability_status?->value ?? $this->availability_status,
                 'availability_status_label' => $this->availability_status?->label(),
                 'created_at' => $this->created_at,
