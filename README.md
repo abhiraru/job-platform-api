@@ -1,4 +1,4 @@
-# Job Platform API
+# HireSphere Backend
 
 A modular Laravel API for a job platform with candidate profiles, recruiter job posting, applications, and AI-powered job matching.
 
